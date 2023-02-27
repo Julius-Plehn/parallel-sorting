@@ -10,6 +10,7 @@ def compare(A, B):
         print("Error")
 
 
+# Earlier experiment, not used
 def partition_old(array, low, high, median=None):
     if median is None:
         pivot_element = array[high]

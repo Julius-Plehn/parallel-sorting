@@ -6,15 +6,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 if __name__ == "__main__":
-    # r = int(sys.argv[1])
-    # size = int(sys.argv[2])
     random.seed(10)
     rs = [5, 7, 9, 11]
     sizes = np.linspace(0, 200, 200, endpoint=False, dtype=int)
-    # print(sizes)
-    # exit()
-    # sizes = [100, 1000, 10000, 100000]
-    # sizes = [100, 1000, 10000]
+    # Large test
+    # sizes = np.linspace(0, 1000, 1000, endpoint=False, dtype=int)
+
     sys.setrecursionlimit(sizes[len(sizes) - 1])
 
     repeat = 5
