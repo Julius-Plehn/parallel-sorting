@@ -131,6 +131,9 @@ if __name__ == "__main__":
 
     sorted_input = quicksort_median(input, 0, len(input) - 1, r=r)
     print(sorted_input)
+
+    # Various Tests below
+    """
     # Check:
     compare(input, sorted_input)
 
@@ -149,3 +152,4 @@ if __name__ == "__main__":
     sorted_test = insertion_sort(test, 0, len(test))
 
     compare(test, sorted_test)
+    """
