@@ -96,15 +96,14 @@ def median_of_medians(array, low, high, k, r=5):
         return median_of_medians(array, q + 1, high, k - i, r)
 
 
-def quicksort_median(array, low, high, r=5):
-    n = 100
+def quicksort_median(array, low, high, r=5, n=100):
     if low < high:
         if high - low < n:
             return insertion_sort(array, low, high + 1)
         m = median_of_medians(array, low, high, (high - low) // 2, r=r)
         array, p = partition(array, low, high, m)
-        quicksort_median(array, low, p - 1, r=r)
-        quicksort_median(array, p + 1, high, r=r)
+        quicksort_median(array, low, p - 1, r=r, n=n)
+        quicksort_median(array, p + 1, high, r=r, n=n)
     return array
 
 
