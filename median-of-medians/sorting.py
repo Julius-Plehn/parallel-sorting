@@ -80,6 +80,16 @@ def quicksort_median(array, low, high, r=5):
         quicksort_median(array, partitioning_index+1, high, r=r)
     return array
 
+def insertion_sort(array):
+    for key in range(1, len(array)):
+        item = array[key]
+        cmp = key - 1
+        while cmp >= 0 and item < array[cmp]:
+            array[cmp + 1] = array[cmp]
+            cmp -= 1
+        array[cmp + 1] = item
+    return array        
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Provide a file as input")
@@ -107,3 +117,6 @@ if __name__ == "__main__":
     random.shuffle(input)
     sorted_input = quicksort(input, 0, len(input)-1)
     compare(input, sorted_input)
+
+    test = [9,5,1,4,3]
+    insertion_sort(test)
