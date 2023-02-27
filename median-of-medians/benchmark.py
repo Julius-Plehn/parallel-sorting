@@ -10,14 +10,14 @@ if __name__ == "__main__":
     # size = int(sys.argv[2])
     random.seed(10)
     rs = [5, 7, 9, 11]
-    sizes = np.linspace(0, 1000, 1000, endpoint=False, dtype=int)
+    sizes = np.linspace(0, 200, 200, endpoint=False, dtype=int)
     # print(sizes)
     # exit()
     # sizes = [100, 1000, 10000, 100000]
     # sizes = [100, 1000, 10000]
     sys.setrecursionlimit(sizes[len(sizes) - 1])
 
-    repeat = 1
+    repeat = 5
 
     timings_quicksort = []
     timings_sorted = []
@@ -30,7 +30,7 @@ if __name__ == "__main__":
         random.shuffle(input)
 
         timing_sorted = timeit.timeit(
-            stmt="sorting.insertion_sort(input.copy())",
+            stmt="sorting.insertion_sort(input.copy(), 0, len(input))",
             globals=globals(),
             number=repeat,
         )
@@ -40,7 +40,7 @@ if __name__ == "__main__":
         # Quicksort using last element as pivot
 
         timing_quicksort = timeit.timeit(
-            stmt="sorting.quicksort(input, 0, len(input)-1)",
+            stmt="sorting.quicksort(input.copy(), 0, len(input)-1)",
             globals=globals(),
             number=repeat,
         )
@@ -51,7 +51,7 @@ if __name__ == "__main__":
             print("Size: {}, r={}".format(size, r))
             # sorted_input = sorting.quicksort_median(input, 0, len(input)-1, r=r)
             timing_median = timeit.timeit(
-                stmt="sorting.quicksort_median(input.copy(), 0, len(input)-1, r=r)",
+                stmt="sorting.quicksort_median(input.copy(), 0, len(input)-1, r=r, n=50)",
                 globals=globals(),
                 number=repeat,
             )
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         sizes,
         timings_sorted,
         marker="o",
-        markersize=3,
+        markersize=1,
         # linewidth=2.0,
         label="Insertion",
     )
@@ -78,7 +78,7 @@ if __name__ == "__main__":
         sizes,
         timings_quicksort,
         marker="o",
-        markersize=3,
+        markersize=1,
         # linewidth=2.0,
         label="Quicksort (Random Pivot)",
     )
@@ -89,7 +89,7 @@ if __name__ == "__main__":
             sizes,
             timings_median[r],
             marker="o",
-            markersize=3,
+            markersize=1,
             # linewidth=2.0,
             label="MoM r: {}".format(r),
         )
