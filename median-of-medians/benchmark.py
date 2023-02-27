@@ -13,7 +13,7 @@ if __name__ == "__main__":
     #sizes = [100, 1000, 10000]
     sys.setrecursionlimit(sizes[len(sizes)-1])
 
-    repeat = 3
+    repeat = 1
 
     timings_quicksort = []
     timings_sorted = []

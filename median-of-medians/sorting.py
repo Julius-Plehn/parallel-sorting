@@ -48,7 +48,7 @@ def median_of_medians(array, low, high, r=5):
             median_idx = math.ceil((end_idx-start_idx)/2)-1
         medians.append(sorted(array[start_idx:end_idx+1])[median_idx])
 
-    pivot_element = medians[math.ceil(len(medians)/2)-1]
+    pivot_element = sorted(medians)[math.ceil(len(medians)/2)-1]
     pivot_index = low+array[low:high+1].index(pivot_element)
 
     array[pivot_index] = array[high]
