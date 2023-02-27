@@ -11,49 +11,13 @@ def compare(A, B):
 
 
 # Version with last element as pivot element
-def partition(array, low, high):
-    pivot_element = array[high]
-    pivot_index = high
-    idx = low
-    moved_high = 1
-    for _ in array[low:high]:
-        if idx == pivot_index:
-            idx += moved_high
-        element = array[idx]
-        if element > pivot_element:
-            move = array.pop(array.index(element))
-            array.insert(high, move)
-            moved_high += 1
-            pivot_index -= 1
-        else:
-            idx += 1
-
-    return (array, pivot_index)
-
-
-def quicksort(array, low, high):
-    if low < high:
-        array, partitioning_index = partition(array, low, high)
-        quicksort(array, low, partitioning_index - 1)
-        quicksort(array, partitioning_index + 1, high)
-    return array
-
-
-def median_of_medians(array, low, high, r=5):
-    median_idx = math.ceil(r / 2) - 1
-    medians = []
-    block_range = high - low
-    blocks = math.ceil(block_range / r)
-    for b in range(blocks):
-        start_idx = low + b * r
-        end_idx = start_idx + r - 1
-        if b == blocks - 1:
-            end_idx = high
-            median_idx = math.ceil((end_idx - start_idx) / 2) - 1
-        medians.append(sorted(array[start_idx : end_idx + 1])[median_idx])
-
-    pivot_element = sorted(medians)[math.ceil(len(medians) / 2) - 1]
-    pivot_index = low + array[low : high + 1].index(pivot_element)
+def partition_old(array, low, high, median=None):
+    if median is None:
+        pivot_element = array[high]
+        pivot_index = high
+    else:
+        pivot_element = median
+        pivot_index = array.index(median)
 
     array[pivot_index] = array[high]
     array[high] = pivot_element
@@ -76,11 +40,64 @@ def median_of_medians(array, low, high, r=5):
     return (array, pivot_index)
 
 
+def partition(array, low, high, median):
+    for i in range(low, high + 1):
+        if array[i] == median:
+            array[i], array[high] = array[high], array[i]
+            break
+
+    i = low - 1
+    for j in range(low, high):
+        if array[j] <= array[high]:
+            i += 1
+            array[i], array[j] = array[j], array[i]
+    array[i + 1], array[high] = array[high], array[i + 1]
+    return array, i + 1
+
+
+def quicksort(array, low, high):
+    if low < high:
+        array, partitioning_index = partition(array, low, high)
+        quicksort(array, low, partitioning_index - 1)
+        quicksort(array, partitioning_index + 1, high)
+    return array
+
+
+def median_of_medians(array, low, high, k, r=5):
+    median_idx = r // 2
+    medians = []
+    block_range = high - low
+
+    if block_range > 0:
+        for b in range(low, high + 1, r):
+            end_idx = min(b + r - 1, high)
+            if end_idx == high:
+                median_idx = (end_idx - b) // 2
+            medians.append(sorted(array[b : end_idx + 1])[median_idx])
+    else:
+        medians.append(low)
+    MoM = 0
+    if len(medians) == 1:
+        return medians[0]
+    else:
+        MoM = median_of_medians(medians, 0, len(medians) - 1, len(medians) // 2, r)
+
+    _, q = partition(array, low, high, MoM)
+    i = q - low + 1
+    if i == k:
+        return array[q]
+    elif i > k:
+        return median_of_medians(array, low, q - 1, k, r)
+    else:
+        return median_of_medians(array, q + 1, high, k - i, r)
+
+
 def quicksort_median(array, low, high, r=5):
     if low < high:
-        array, partitioning_index = median_of_medians(array, low, high, r=r)
-        quicksort_median(array, low, partitioning_index - 1, r=r)
-        quicksort_median(array, partitioning_index + 1, high, r=r)
+        m = median_of_medians(array, low, high, (high - low) // 2, r=r)
+        array, p = partition(array, low, high, m)
+        quicksort_median(array, low, p - 1, r=r)
+        quicksort_median(array, p + 1, high, r=r)
     return array
 
 
@@ -96,6 +113,7 @@ def insertion_sort(array):
 
 
 if __name__ == "__main__":
+    # sys.setrecursionlimit(10)
     if len(sys.argv) < 2:
         print("Provide a file as input")
         exit()
@@ -104,10 +122,9 @@ if __name__ == "__main__":
         r = int(sys.argv[2])
     f = open(sys.argv[1], "r")
     input = list(map(int, f.read().split()))
-    # print("Input:")
-    print(input)
-    sorted_input = quicksort_median(input, 0, len(input) - 1, r=r)
 
+    sorted_input = quicksort_median(input, 0, len(input) - 1, r=r)
+    print(sorted_input)
     # Check:
     compare(input, sorted_input)
 
@@ -115,13 +132,12 @@ if __name__ == "__main__":
     random.shuffle(input)
 
     sorted_input = quicksort_median(input, 0, len(input) - 1, r=r)
-
     compare(input, sorted_input)
 
     input = list(range(1, 100))
     random.shuffle(input)
-    sorted_input = quicksort(input, 0, len(input) - 1)
-    compare(input, sorted_input)
+    # sorted_input = quicksort(input, 0, len(input) - 1)
+    # compare(input, sorted_input)
 
     test = [9, 5, 1, 4, 3]
     sorted_test = insertion_sort(test)
