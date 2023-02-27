@@ -10,7 +10,6 @@ def compare(A, B):
         print("Error")
 
 
-# Version with last element as pivot element
 def partition_old(array, low, high, median=None):
     if median is None:
         pivot_element = array[high]
@@ -40,7 +39,12 @@ def partition_old(array, low, high, median=None):
     return (array, pivot_index)
 
 
-def partition(array, low, high, median):
+def partition(array, low, high, median=None):
+    # Random pivot
+    if median is None:
+        median_idx = random.randint(low, high)
+        median = array[median_idx]
+
     for i in range(low, high + 1):
         if array[i] == median:
             array[i], array[high] = array[high], array[i]
@@ -93,7 +97,10 @@ def median_of_medians(array, low, high, k, r=5):
 
 
 def quicksort_median(array, low, high, r=5):
+    n = 100
     if low < high:
+        if high - low < n:
+            return insertion_sort(array, low, high + 1)
         m = median_of_medians(array, low, high, (high - low) // 2, r=r)
         array, p = partition(array, low, high, m)
         quicksort_median(array, low, p - 1, r=r)
@@ -101,8 +108,8 @@ def quicksort_median(array, low, high, r=5):
     return array
 
 
-def insertion_sort(array):
-    for key in range(1, len(array)):
+def insertion_sort(array, low, high):
+    for key in range(low, high):
         item = array[key]
         cmp = key - 1
         while cmp >= 0 and item < array[cmp]:
@@ -140,6 +147,6 @@ if __name__ == "__main__":
     # compare(input, sorted_input)
 
     test = [9, 5, 1, 4, 3]
-    sorted_test = insertion_sort(test)
+    sorted_test = insertion_sort(test, 0, len(test))
 
     compare(test, sorted_test)

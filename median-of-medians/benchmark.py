@@ -10,7 +10,7 @@ if __name__ == "__main__":
     # size = int(sys.argv[2])
     random.seed(10)
     rs = [5, 7, 9, 11]
-    sizes = np.linspace(0, 500, 500, endpoint=False, dtype=int)
+    sizes = np.linspace(0, 1000, 1000, endpoint=False, dtype=int)
     # print(sizes)
     # exit()
     # sizes = [100, 1000, 10000, 100000]
@@ -38,11 +38,15 @@ if __name__ == "__main__":
         print("Time: {}".format(timing_sorted / repeat))
 
         # Quicksort using last element as pivot
-        """
-        timing_quicksort = timeit.timeit(stmt="sorting.quicksort(input, 0, len(input)-1)", globals=globals(), number=repeat)
-        timings_quicksort.append(timing_quicksort/repeat)
-        print("Time: {}".format(timing_quicksort/repeat))
-        """
+
+        timing_quicksort = timeit.timeit(
+            stmt="sorting.quicksort(input, 0, len(input)-1)",
+            globals=globals(),
+            number=repeat,
+        )
+        timings_quicksort.append(timing_quicksort / repeat)
+        print("Time: {}".format(timing_quicksort / repeat))
+
         for r in rs:
             print("Size: {}, r={}".format(size, r))
             # sorted_input = sorting.quicksort_median(input, 0, len(input)-1, r=r)
@@ -54,12 +58,8 @@ if __name__ == "__main__":
             timings_median[r].append(timing_median / repeat)
             print("Time: {}".format(timing_median / repeat))
 
-    print(timings_quicksort)
-    print(timings_sorted)
-    print(timings_median)
-
     fig, ax = plt.subplots()
-    plt.xlabel("Size")
+    plt.xlabel("Size n")
     plt.ylabel("Time in Sec.")
     fig.set_size_inches(14, 5)
 
@@ -74,17 +74,16 @@ if __name__ == "__main__":
     )
     ax.legend()
 
-    """
     ax.plot(
         sizes,
         timings_quicksort,
         marker="o",
         markersize=3,
         # linewidth=2.0,
-        label="Quicksort",
+        label="Quicksort (Random Pivot)",
     )
     ax.legend()
-    """
+
     for r in rs:
         ax.plot(
             sizes,
