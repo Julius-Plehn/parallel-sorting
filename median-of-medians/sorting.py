@@ -51,23 +51,21 @@ def median_of_medians(array, low, high, r=5):
     pivot_element = medians[math.ceil(len(medians)/2)-1]
     pivot_index = low+array[low:high+1].index(pivot_element)
 
+    array[pivot_index] = array[high]
+    array[high] = pivot_element
+    pivot_index = high
+
     idx = low
     moved_high = 1
     for _ in array[low:high]:
         if idx == pivot_index:
             idx += moved_high
         element = array[idx]
-        
-        if element > pivot_element and idx < pivot_index:
+        if element > pivot_element:
             move = array.pop(array.index(element))
-            array.insert(pivot_index,move)
-            pivot_index -= 1
+            array.insert(high,move)
             moved_high += 1
-        elif element < pivot_element and idx > pivot_index:
-            move = array.pop(array.index(element))
-            array.insert(pivot_index,move)
-            pivot_index += 1
-            idx +=1
+            pivot_index -= 1
         else:
             idx +=1
 
@@ -119,4 +117,6 @@ if __name__ == "__main__":
     compare(input, sorted_input)
 
     test = [9,5,1,4,3]
-    insertion_sort(test)
+    sorted_test = insertion_sort(test)
+
+    compare(test, sorted_test)

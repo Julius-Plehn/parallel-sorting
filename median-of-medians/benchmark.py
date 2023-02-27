@@ -9,8 +9,8 @@ if __name__ == "__main__":
     #size = int(sys.argv[2])
     random.seed(10)
     rs = [5, 7, 9, 11]
-    sizes = [10, 100, 1000, 10000]
-    #sizes = [10, 100]
+    sizes = [100, 1000, 10000, 100000]
+    #sizes = [100, 1000, 10000]
     sys.setrecursionlimit(sizes[len(sizes)-1])
 
     repeat = 3
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     fig, ax = plt.subplots()
     plt.xlabel("Size")
     plt.ylabel("Time in Sec.")
-    fig.set_size_inches(10, 5)
+    fig.set_size_inches(14, 5)
     
     ax.set_xticks(sizes)
     ax.plot(
