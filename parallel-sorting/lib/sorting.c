@@ -4,6 +4,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <omp.h>
+
 /*
 Gets the number of digits of an integer
 https://stackoverflow.com/a/3068420/2521647
@@ -39,6 +41,7 @@ int *counting_sort(int *data, int length, int position) {
     int *output = malloc(length * sizeof(int));
     memset(output, 0, length * sizeof(int));
 
+#pragma omp parallel for
     for (int i = 0; i < length; i++) {
         int digit = get_digit_at_position(data[i], position);
         digits[i] = digit;
@@ -109,8 +112,27 @@ void random_data(int *data, int lower, int upper, int count, int startIdx) {
 
 int main(int argc, char **argv) {
     srand(time(0));
-    // int N = 10000000;
-    int N = 100;
+
+    if (argc < 4) {
+        printf("Missing parameters, show help\n");
+        return 1;
+    }
+    // 0: Prints, 1: No debug prints
+    int debug = atoi(argv[1]);
+    // Number of values to sort
+    int N = atoi(argv[2]);
+    /*
+     * Variant
+     * 0: no parallelization, 1: OpenMP, 2: MPI, 3: Hybrid
+     */
+    int variant = atoi(argv[3]);
+    // Overwrite independet of environment variable
+    if (variant == 0 || variant == 2) {
+        omp_set_num_threads(1);
+    }
+    if (variant == 1 || variant == 3)
+        printf("Running with %d OpenMP threads\n", omp_get_max_threads());
+
     int *data = malloc(N * sizeof(int));
     if (data == NULL) {
         printf("Memory not allocated.\n");
@@ -118,12 +140,17 @@ int main(int argc, char **argv) {
     }
     random_data(data, 0, 200, N, 0);
 
-    printf("Unsorted:\n");
-    print_array(data, N);
+    if (debug) {
+        printf("Unsorted:\n");
+        print_array(data, N);
+    }
 
     data = radix_sort_basic(data, N);
-    printf("Sorted:\n");
-    print_array(data, N);
+
+    if (debug) {
+        printf("Sorted:\n");
+        print_array(data, N);
+    }
 
     free(data);
     return 0;
