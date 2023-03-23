@@ -41,7 +41,7 @@ int *counting_sort(int *data, int length, int position) {
     int *output = malloc(length * sizeof(int));
     memset(output, 0, length * sizeof(int));
 
-#pragma omp parallel for
+#pragma omp parallel for reduction(+ : counting[:10])
     for (int i = 0; i < length; i++) {
         int digit = get_digit_at_position(data[i], position);
         digits[i] = digit;
@@ -54,6 +54,7 @@ int *counting_sort(int *data, int length, int position) {
         // printf("Cumulative: %d\n", counting[i]);
     }
 
+    // Not possible: #pragma omp parallel forreduction(- : counting[:10])
     // Start from the back, otherwise would reposition sorted/short elements
     for (int i = length - 1; i >= 0; i--) {
         int new_position = counting[digits[i]] - 1;
@@ -112,6 +113,7 @@ void random_data(int *data, int lower, int upper, int count, int startIdx) {
 
 int main(int argc, char **argv) {
     srand(time(0));
+    double itime, ftime, exec_time;
 
     if (argc < 4) {
         printf("Missing parameters, show help\n");
@@ -138,14 +140,18 @@ int main(int argc, char **argv) {
         printf("Memory not allocated.\n");
         exit(0);
     }
-    random_data(data, 0, 200, N, 0);
+    random_data(data, 0, N, N, 0);
 
     if (debug) {
         printf("Unsorted:\n");
         print_array(data, N);
     }
 
+    itime = omp_get_wtime();
     data = radix_sort_basic(data, N);
+    ftime = omp_get_wtime();
+    exec_time = ftime - itime;
+    printf("Elapsed time: %f\n", exec_time);
 
     if (debug) {
         printf("Sorted:\n");
