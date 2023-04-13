@@ -1,4 +1,5 @@
 #include <math.h>
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,7 +42,7 @@ int *counting_sort(int *data, int length, int position) {
     int *output = malloc(length * sizeof(int));
     memset(output, 0, length * sizeof(int));
 
-#pragma omp parallel for reduction(+ : counting[:10])
+#pragma omp parallel for reduction(+ : counting[ : 10])
     for (int i = 0; i < length; i++) {
         int digit = get_digit_at_position(data[i], position);
         digits[i] = digit;
@@ -112,6 +113,11 @@ void random_data(int *data, int lower, int upper, int count, int startIdx) {
 }
 
 int main(int argc, char **argv) {
+    MPI_Init(NULL, NULL);
+    int mpi_size, mpi_rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+
     srand(time(0));
     double itime, ftime, exec_time;
 
@@ -132,8 +138,10 @@ int main(int argc, char **argv) {
     if (variant == 0 || variant == 2) {
         omp_set_num_threads(1);
     }
-    if (variant == 1 || variant == 3)
-        printf("Running with %d OpenMP threads\n", omp_get_max_threads());
+    if (mpi_rank == 0) {
+        printf("Running with %d OpenMP threads and %d MPI processes\n",
+               omp_get_max_threads(), mpi_size);
+    }
 
     int *data = malloc(N * sizeof(int));
     if (data == NULL) {
@@ -142,7 +150,7 @@ int main(int argc, char **argv) {
     }
     random_data(data, 0, N, N, 0);
 
-    if (debug) {
+    if (mpi_rank == 0 && debug) {
         printf("Unsorted:\n");
         print_array(data, N);
     }
@@ -153,11 +161,12 @@ int main(int argc, char **argv) {
     exec_time = ftime - itime;
     printf("Elapsed time: %f\n", exec_time);
 
-    if (debug) {
+    if (mpi_rank == 0 && debug) {
         printf("Sorted:\n");
         print_array(data, N);
     }
 
     free(data);
+    MPI_Finalize();
     return 0;
 }

@@ -4,7 +4,7 @@ cc = meson.get_compiler('c')
 mpic = dependency('mpi', language : 'c', method :'config-tool')
 omp_dep = dependency('openmp')
 
-deps = [omp_dep]
+deps = [mpic,omp_dep]
 
 sorting_incs = include_directories([
 	'include',
