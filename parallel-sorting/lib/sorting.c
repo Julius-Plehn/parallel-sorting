@@ -106,6 +106,22 @@ int *radix_sort_basic(int *data, int length) {
     return data;
 }
 
+int *radix_sort_mpi(int *data, int length) {
+    // Local max
+    int index_max_element = index_max(data, length);
+    int max_digits = int_length(data[index_max_element]);
+
+    // Global max
+    int global_max_digits;
+    MPI_Allreduce(&max_digits, &global_max_digits, 1, MPI_INT, MPI_MAX,
+                  MPI_COMM_WORLD);
+
+    for (int digit = 0; digit < global_max_digits; digit++) {
+        data = counting_sort(data, length, digit);
+    }
+    return data;
+}
+
 void random_data(int *data, int lower, int upper, int count, int startIdx) {
     for (int i = 0; i < count; i++) {
         data[startIdx + i] = (rand() % (upper - lower + 1)) + lower;
@@ -119,7 +135,7 @@ int main(int argc, char **argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
     srand(time(0));
-    double itime, ftime, exec_time;
+    double itime, ftime, exec_time = 0.0;
 
     if (argc < 4) {
         printf("Missing parameters, show help\n");
@@ -155,10 +171,16 @@ int main(int argc, char **argv) {
         print_array(data, N);
     }
 
-    itime = omp_get_wtime();
-    data = radix_sort_basic(data, N);
-    ftime = omp_get_wtime();
-    exec_time = ftime - itime;
+    // Non-MPI version
+    if (mpi_size == 1) {
+        itime = omp_get_wtime();
+        data = radix_sort_basic(data, N);
+        ftime = omp_get_wtime();
+        exec_time = ftime - itime;
+    } else { // MPI version
+        data = radix_sort_mpi(data, N);
+    }
+
     printf("Elapsed time: %f\n", exec_time);
 
     if (mpi_rank == 0 && debug) {
