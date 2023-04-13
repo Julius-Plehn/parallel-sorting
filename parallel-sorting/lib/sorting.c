@@ -153,21 +153,6 @@ void print_array(int *data, int length) {
     } else {
         MPI_Send(data, length, MPI_INT, 0, 1, MPI_COMM_WORLD);
     }
-
-    /*
-    for (int r = 0; r < mpi_size; r++) {
-        MPI_Barrier(MPI_COMM_WORLD);
-        if (r == mpi_rank) {
-            for (int i = 0; i < length; i++) {
-                printf("%d ", data[i]);
-            }
-        }
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (mpi_rank == mpi_size)
-        printf("\n");
-    MPI_Barrier(MPI_COMM_WORLD);
-    */
 }
 
 int *radix_sort_basic(int *data, int length) {
@@ -266,6 +251,7 @@ int main(int argc, char **argv) {
         ftime = omp_get_wtime();
         exec_time = ftime - itime;
     } else { // MPI version
+             // TODO: Time measurement
         data = radix_sort_mpi(data, N);
     }
 
