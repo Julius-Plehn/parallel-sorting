@@ -128,16 +128,45 @@ int *counting_sort_mpi(int *data, int length, int position) {
         }
     }
 
+    free(counting_per_rank);
     free(data);
     free(digits);
     return output;
 }
 
 void print_array(int *data, int length) {
-    for (int i = 0; i < length; i++) {
-        printf("%d ", data[i]);
+    if (mpi_rank == 0) {
+        for (int i = 0; i < length; i++) {
+            printf("%d ", data[i]);
+        }
+        if (mpi_size > 1) {
+            int *values = malloc(sizeof(int) * length);
+            for (int rank = 1; rank < mpi_size; rank++) {
+                MPI_Recv(values, length, MPI_INT, rank, 1, MPI_COMM_WORLD,
+                         MPI_STATUS_IGNORE);
+                for (int i = 0; i < length; i++) {
+                    printf("%d ", data[i]);
+                }
+            }
+        }
+    } else {
+        MPI_Send(data, length, MPI_INT, 0, 1, MPI_COMM_WORLD);
     }
     printf("\n");
+    /*
+    for (int r = 0; r < mpi_size; r++) {
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (r == mpi_rank) {
+            for (int i = 0; i < length; i++) {
+                printf("%d ", data[i]);
+            }
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (mpi_rank == mpi_size)
+        printf("\n");
+    MPI_Barrier(MPI_COMM_WORLD);
+    */
 }
 
 int *radix_sort_basic(int *data, int length) {
@@ -151,7 +180,8 @@ int *radix_sort_basic(int *data, int length) {
     */
     int index_max_element = index_max(data, length);
     int max_digits = int_length(data[index_max_element]);
-    // printf("Max index: %d, Value: %d, max_digits: %d\n", index_max_element,
+    // printf("Max index: %d, Value: %d, max_digits: %d\n",
+    // index_max_element,
     //       data[index_max_element], max_digits);
 
     for (int digit = 0; digit < max_digits; digit++) {
@@ -190,7 +220,7 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-    srand(time(0));
+    srand(mpi_rank);
     double itime, ftime, exec_time = 0.0;
 
     if (argc < 4) {
@@ -222,8 +252,9 @@ int main(int argc, char **argv) {
     }
     random_data(data, 0, N, N, 0);
 
-    if (mpi_rank == 0 && debug) {
-        printf("Unsorted:\n");
+    if (debug) {
+        if (mpi_rank == 0)
+            printf("Unsorted:\n");
         print_array(data, N);
     }
 
@@ -239,8 +270,9 @@ int main(int argc, char **argv) {
 
     printf("Elapsed time: %f\n", exec_time);
 
-    if (mpi_rank == 0 && debug) {
-        printf("Sorted:\n");
+    if (debug) {
+        if (mpi_rank == 0)
+            printf("Sorted:\n");
         print_array(data, N);
     }
 
