@@ -7,6 +7,8 @@
 
 #include <omp.h>
 
+int mpi_size, mpi_rank;
+
 /*
 Gets the number of digits of an integer
 https://stackoverflow.com/a/3068420/2521647
@@ -79,6 +81,49 @@ int *counting_sort(int *data, int length, int position) {
     return output;
 }
 
+int *counting_sort_mpi(int *data, int length, int position) {
+    int counting[10] = {0};
+    int counting_cumulative[10] = {0};
+    int *digits = malloc(length * sizeof(int));
+    // Will be written to before first read
+    // memset(digits, 0, length * sizeof(int));
+    int *output = malloc(length * sizeof(int));
+    memset(output, 0, length * sizeof(int));
+
+#pragma omp parallel for reduction(+ : counting[ : 10])
+    for (int i = 0; i < length; i++) {
+        int digit = get_digit_at_position(data[i], position);
+        digits[i] = digit;
+        ++counting_cumulative[digit];
+    }
+
+    // Update to contain cumulative counts of elements
+    counting[0] = counting_cumulative[0];
+    for (int i = 1; i < 10; i++) {
+        counting[i] = counting_cumulative[i];
+        counting_cumulative[i] += counting_cumulative[i - 1];
+        // printf("Cumulative: %d\n", counting[i]);
+    }
+
+    // Not possible: #pragma omp parallel forreduction(- : counting[:10])
+    // Start from the back, otherwise would reposition sorted/short elements
+    for (int i = length - 1; i >= 0; i--) {
+        int new_position = counting_cumulative[digits[i]] - 1;
+        // Reduce count of occurrences of this digit
+        --counting_cumulative[digits[i]];
+        output[new_position] = data[i];
+    }
+
+    /*
+     * At this point we need to determine how we should redistribute our values
+     * to each process
+     */
+
+    free(data);
+    free(digits);
+    return output;
+}
+
 void print_array(int *data, int length) {
     for (int i = 0; i < length; i++) {
         printf("%d ", data[i]);
@@ -115,9 +160,11 @@ int *radix_sort_mpi(int *data, int length) {
     int global_max_digits;
     MPI_Allreduce(&max_digits, &global_max_digits, 1, MPI_INT, MPI_MAX,
                   MPI_COMM_WORLD);
+    if (mpi_rank == 1)
+        printf("Max global: %d\n", global_max_digits);
 
     for (int digit = 0; digit < global_max_digits; digit++) {
-        data = counting_sort(data, length, digit);
+        data = counting_sort_mpi(data, length, digit);
     }
     return data;
 }
@@ -130,7 +177,7 @@ void random_data(int *data, int lower, int upper, int count, int startIdx) {
 
 int main(int argc, char **argv) {
     MPI_Init(NULL, NULL);
-    int mpi_size, mpi_rank;
+
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
