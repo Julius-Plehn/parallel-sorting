@@ -145,14 +145,15 @@ void print_array(int *data, int length) {
                 MPI_Recv(values, length, MPI_INT, rank, 1, MPI_COMM_WORLD,
                          MPI_STATUS_IGNORE);
                 for (int i = 0; i < length; i++) {
-                    printf("%d ", data[i]);
+                    printf("%d ", values[i]);
                 }
             }
         }
+        printf("\n");
     } else {
         MPI_Send(data, length, MPI_INT, 0, 1, MPI_COMM_WORLD);
     }
-    printf("\n");
+
     /*
     for (int r = 0; r < mpi_size; r++) {
         MPI_Barrier(MPI_COMM_WORLD);
