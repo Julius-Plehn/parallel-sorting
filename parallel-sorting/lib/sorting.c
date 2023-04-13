@@ -118,6 +118,15 @@ int *counting_sort_mpi(int *data, int length, int position) {
      * At this point we need to determine how we should redistribute our values
      * to each process
      */
+    int *counting_per_rank = malloc(sizeof(int) * 10 * mpi_size);
+    MPI_Allgather(counting, 10, MPI_INT, counting_per_rank, 10, MPI_INT,
+                  MPI_COMM_WORLD);
+
+    if (mpi_rank == 1) {
+        for (int i = 0; i < (10 * mpi_size); i++) {
+            printf("[%d]: %d\n", i, counting_per_rank[i]);
+        }
+    }
 
     free(data);
     free(digits);
