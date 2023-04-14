@@ -84,6 +84,9 @@ int *counting_sort(int *data, int length, int position) {
 int *counting_sort_mpi(int *data, int length, int position) {
     int counting[10] = {0};
     int counting_cumulative[10] = {0};
+    int counting_cumulative_global[10] = {0};
+    int counting_global[10] = {0};
+
     int *digits = malloc(length * sizeof(int));
     // Will be written to before first read
     // memset(digits, 0, length * sizeof(int));
@@ -105,6 +108,14 @@ int *counting_sort_mpi(int *data, int length, int position) {
         // printf("Cumulative: %d\n", counting[i]);
     }
 
+    if (mpi_rank == 0) {
+        printf("Local\n");
+        for (int i = 0; i < 10; i++) {
+            printf("Counting: [%d]: %d\n", i, counting[i]);
+            printf("Cumulative: [%d]: %d\n", i, counting_cumulative[i]);
+        }
+    }
+
     // Not possible: #pragma omp parallel forreduction(- : counting[:10])
     // Start from the back, otherwise would reposition sorted/short elements
     for (int i = length - 1; i >= 0; i--) {
@@ -122,11 +133,41 @@ int *counting_sort_mpi(int *data, int length, int position) {
     MPI_Allgather(counting, 10, MPI_INT, counting_per_rank, 10, MPI_INT,
                   MPI_COMM_WORLD);
 
-    if (mpi_rank == 1) {
+    if (mpi_rank == 0) {
         for (int i = 0; i < (10 * mpi_size); i++) {
             printf("[%d]: %d\n", i, counting_per_rank[i]);
         }
     }
+
+    // Count globally
+    for (int i = 0; i < 10; i++) {
+        for (int rank = 0; rank < mpi_size; rank++) {
+            counting_global[i] += counting_per_rank[i + 10 * rank];
+        }
+    }
+    if (mpi_rank == 0) {
+        printf("Global counting\n");
+        for (int i = 0; i < 10; i++) {
+            printf("[%d]: %d\n", i, counting_global[i]);
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    /*
+    for (int i = 0; i < 10; i++) {
+        for (int rank = 0; rank < mpi_size; rank++) {
+            counting_per_rank[i] += counting_per_rank[(i + 10 * rank) - 1];
+        }
+    }
+    */
+
+    if (mpi_rank == 0) {
+        printf("Global\n");
+        for (int i = 0; i < 10; i++) {
+            printf("[%d]: %d\n", i, counting_per_rank[i]);
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
 
     free(counting_per_rank);
     free(data);
