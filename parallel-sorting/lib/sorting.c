@@ -144,30 +144,13 @@ int *counting_sort_mpi(int *data, int length, int position) {
         for (int rank = 0; rank < mpi_size; rank++) {
             counting_global[i] += counting_per_rank[i + 10 * rank];
         }
+        counting_cumulative_global[i] = counting_global[i];
     }
-    if (mpi_rank == 0) {
-        printf("Global counting\n");
-        for (int i = 0; i < 10; i++) {
-            printf("[%d]: %d\n", i, counting_global[i]);
-        }
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
 
-    /*
-    for (int i = 0; i < 10; i++) {
-        for (int rank = 0; rank < mpi_size; rank++) {
-            counting_per_rank[i] += counting_per_rank[(i + 10 * rank) - 1];
-        }
+    // Count globally cumulative
+    for (int i = 1; i < 10; i++) {
+        counting_cumulative_global[i] += counting_cumulative_global[i - 1];
     }
-    */
-
-    if (mpi_rank == 0) {
-        printf("Global\n");
-        for (int i = 0; i < 10; i++) {
-            printf("[%d]: %d\n", i, counting_per_rank[i]);
-        }
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
 
     free(counting_per_rank);
     free(data);
