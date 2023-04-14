@@ -86,6 +86,10 @@ int *counting_sort_mpi(int *data, int length, int position) {
     int counting_cumulative[10] = {0};
     int counting_cumulative_global[10] = {0};
     int counting_global[10] = {0};
+    int counting_global_up_to_rank[10] = {0};
+
+    int *shared_sorting;
+    MPI_Win win;
 
     int *digits = malloc(length * sizeof(int));
     // Will be written to before first read
@@ -106,14 +110,6 @@ int *counting_sort_mpi(int *data, int length, int position) {
         counting[i] = counting_cumulative[i];
         counting_cumulative[i] += counting_cumulative[i - 1];
         // printf("Cumulative: %d\n", counting[i]);
-    }
-
-    if (mpi_rank == 0) {
-        printf("Local\n");
-        for (int i = 0; i < 10; i++) {
-            printf("Counting: [%d]: %d\n", i, counting[i]);
-            printf("Cumulative: [%d]: %d\n", i, counting_cumulative[i]);
-        }
     }
 
     // Not possible: #pragma omp parallel forreduction(- : counting[:10])
@@ -147,10 +143,28 @@ int *counting_sort_mpi(int *data, int length, int position) {
         counting_cumulative_global[i] = counting_global[i];
     }
 
+    // Count globally up to rank
+    for (int rank = 0; rank <= mpi_rank; rank++) {
+        for (int i = 0; i < 10; i++) {
+            counting_global_up_to_rank[i] += counting_per_rank[i + 10 * rank];
+        }
+    }
+
     // Count globally cumulative
     for (int i = 1; i < 10; i++) {
         counting_cumulative_global[i] += counting_cumulative_global[i - 1];
     }
+
+    /*
+    // Redistribute data
+    MPI_Win_allocate(length * sizeof(int), sizeof(int), MPI_INFO_NULL,
+                     MPI_COMM_WORLD, &shared_sorting, &win);
+    for (int i = 0; i < length; i++) {
+        int new_position = counting_cumulative_global[digits[i]] - 1;
+        --counting_cumulative[digits[i]];
+        output[new_position] = data[i];
+    }
+    */
 
     free(counting_per_rank);
     free(data);
