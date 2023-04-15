@@ -9,6 +9,27 @@
 
 int mpi_size, mpi_rank;
 
+void print_array(int *data, int length) {
+    if (mpi_rank == 0) {
+        for (int i = 0; i < length; i++) {
+            printf("%d ", data[i]);
+        }
+        if (mpi_size > 1) {
+            int *values = malloc(sizeof(int) * length);
+            for (int rank = 1; rank < mpi_size; rank++) {
+                MPI_Recv(values, length, MPI_INT, rank, 1, MPI_COMM_WORLD,
+                         MPI_STATUS_IGNORE);
+                for (int i = 0; i < length; i++) {
+                    printf("%d ", values[i]);
+                }
+            }
+        }
+        printf("\n");
+    } else {
+        MPI_Send(data, length, MPI_INT, 0, 1, MPI_COMM_WORLD);
+    }
+}
+
 /*
 Gets the number of digits of an integer
 https://stackoverflow.com/a/3068420/2521647
@@ -166,31 +187,54 @@ int *counting_sort_mpi(int *data, int length, int position) {
     }
     */
 
+    /*
+     * Moves data to a new position, which might be in the memory space of
+     * another process
+     *
+     * Position is calculated like in the following:
+     * Index according to global cumulative position - (position of digit of up
+     * to globally up to rank - local position) - 1
+     */
+
+    MPI_Win_allocate(length * sizeof(int), sizeof(int), MPI_INFO_NULL,
+                     MPI_COMM_WORLD, &shared_sorting, &win);
+    MPI_Win_fence(0, win);
+
+    for (int i = 0; i < length; i++) {
+        int new_position =
+            counting_cumulative_global[digits[i]] -
+            (counting_global_up_to_rank[digits[i]] - counting[digits[i]]) - 1;
+        int move_to_rank = new_position / mpi_size;
+        int rank_local_position = new_position % length;
+        printf(
+            "Rank: %d: [%d]: %d, New Rank: %d, Local position: %d, Value: %d\n",
+            mpi_rank, i, new_position, move_to_rank, rank_local_position,
+            digits[i]);
+
+        if (move_to_rank == mpi_rank)
+            shared_sorting[rank_local_position] = output[i];
+        else {
+            MPI_Put(&output[i], 1, MPI_INT, move_to_rank, rank_local_position,
+                    1, MPI_INT, win);
+        }
+        // Reduce count of occurrences of this digit
+        --counting_cumulative_global[digits[i]];
+        // output[new_position] = data[i];
+
+        // MPI_Barrier(MPI_COMM_WORLD);
+        // print_array(shared_sorting, length);
+    }
+    MPI_Win_fence(0, win);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    print_array(shared_sorting, length);
+
+    MPI_Win_free(&win);
+
     free(counting_per_rank);
     free(data);
     free(digits);
     return output;
-}
-
-void print_array(int *data, int length) {
-    if (mpi_rank == 0) {
-        for (int i = 0; i < length; i++) {
-            printf("%d ", data[i]);
-        }
-        if (mpi_size > 1) {
-            int *values = malloc(sizeof(int) * length);
-            for (int rank = 1; rank < mpi_size; rank++) {
-                MPI_Recv(values, length, MPI_INT, rank, 1, MPI_COMM_WORLD,
-                         MPI_STATUS_IGNORE);
-                for (int i = 0; i < length; i++) {
-                    printf("%d ", values[i]);
-                }
-            }
-        }
-        printf("\n");
-    } else {
-        MPI_Send(data, length, MPI_INT, 0, 1, MPI_COMM_WORLD);
-    }
 }
 
 int *radix_sort_basic(int *data, int length) {
