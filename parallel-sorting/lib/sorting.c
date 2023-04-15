@@ -135,12 +135,14 @@ int *counting_sort_mpi(int *data, int length, int position) {
 
     // Not possible: #pragma omp parallel forreduction(- : counting[:10])
     // Start from the back, otherwise would reposition sorted/short elements
+    /*
     for (int i = length - 1; i >= 0; i--) {
         int new_position = counting_cumulative[digits[i]] - 1;
         // Reduce count of occurrences of this digit
         --counting_cumulative[digits[i]];
         output[new_position] = data[i];
     }
+    */
 
     /*
      * At this point we need to determine how we should redistribute our values
@@ -177,17 +179,6 @@ int *counting_sort_mpi(int *data, int length, int position) {
     }
 
     /*
-    // Redistribute data
-    MPI_Win_allocate(length * sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     MPI_COMM_WORLD, &shared_sorting, &win);
-    for (int i = 0; i < length; i++) {
-        int new_position = counting_cumulative_global[digits[i]] - 1;
-        --counting_cumulative[digits[i]];
-        output[new_position] = data[i];
-    }
-    */
-
-    /*
      * Moves data to a new position, which might be in the memory space of
      * another process
      *
@@ -204,25 +195,21 @@ int *counting_sort_mpi(int *data, int length, int position) {
         int new_position =
             counting_cumulative_global[digits[i]] -
             (counting_global_up_to_rank[digits[i]] - counting[digits[i]]) - 1;
-        int move_to_rank = new_position / mpi_size;
+        int move_to_rank = new_position / length;
         int rank_local_position = new_position % length;
         printf(
             "Rank: %d: [%d]: %d, New Rank: %d, Local position: %d, Value: %d\n",
             mpi_rank, i, new_position, move_to_rank, rank_local_position,
-            digits[i]);
+            data[i]);
 
         if (move_to_rank == mpi_rank)
-            shared_sorting[rank_local_position] = output[i];
+            shared_sorting[rank_local_position] = data[i];
         else {
-            MPI_Put(&output[i], 1, MPI_INT, move_to_rank, rank_local_position,
-                    1, MPI_INT, win);
+            MPI_Put(&data[i], 1, MPI_INT, move_to_rank, rank_local_position, 1,
+                    MPI_INT, win);
         }
         // Reduce count of occurrences of this digit
         --counting_cumulative_global[digits[i]];
-        // output[new_position] = data[i];
-
-        // MPI_Barrier(MPI_COMM_WORLD);
-        // print_array(shared_sorting, length);
     }
     MPI_Win_fence(0, win);
     MPI_Barrier(MPI_COMM_WORLD);
