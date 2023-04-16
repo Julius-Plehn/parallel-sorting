@@ -176,14 +176,6 @@ int *counting_sort_mpi(int *data, int length, int position) {
         }
     }
 
-    /*
-     for (int rank = mpi_rank; rank > 0; rank--) {
-         for (int i = 0; i < 10; i++) {
-             counting_global_up_to_rank[i] += counting_per_rank[i + 10 * rank];
-         }
-     }
-     */
-
     // Count globally cumulative
     for (int i = 1; i < 10; i++) {
         counting_cumulative_global[i] += counting_cumulative_global[i - 1];
@@ -194,13 +186,8 @@ int *counting_sort_mpi(int *data, int length, int position) {
      * another process
      *
      * Position is calculated like in the following:
-     * Index according to global cumulative position - (position of digit of up
-     * to globally up to rank - local position) - 1
+     * Global cumulative count - # occurrences of digit after own process - 1
      */
-
-    MPI_Win_allocate(length * sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     MPI_COMM_WORLD, &shared_sorting, &win);
-    MPI_Win_fence(0, win);
 
     // Counts after
     for (int rank = mpi_rank + 1; rank < mpi_size; rank++) {
@@ -222,9 +209,11 @@ int *counting_sort_mpi(int *data, int length, int position) {
             counting_cumulative_global[i] - counting_global_after_rank[i];
     }
 
+    MPI_Win_allocate(length * sizeof(int), sizeof(int), MPI_INFO_NULL,
+                     MPI_COMM_WORLD, &shared_sorting, &win);
+    MPI_Win_fence(0, win);
+
     for (int i = length - 1; i >= 0; i--) {
-        // for (int i = 0; i < length; i++) {
-        //  int digit = digits[i];
         int digit = get_digit_at_position(output[i], position);
         int new_position = counting_cumulative_global[digit] - 1;
         int move_to_rank = new_position / length;
@@ -265,11 +254,6 @@ int *radix_sort_basic(int *data, int length) {
     // int length = 5;
     // int data[] = {2, 40, 1099, 99, 782};
 
-    /*
-    for (int i = 0; i < length; i++) {
-        printf("Input: %d, Digits: %d\n", data[i], int_length(data[i]));
-    }
-    */
     int index_max_element = index_max(data, length);
     int max_digits = int_length(data[index_max_element]);
     // printf("Max index: %d, Value: %d, max_digits: %d\n",
@@ -357,7 +341,6 @@ int main(int argc, char **argv) {
         end_time = omp_get_wtime();
         exec_time = end_time - start_time;
     } else { // MPI version
-             // TODO: Time measurement
         start_time = MPI_Wtime();
         data = radix_sort_mpi(data, N);
         end_time = MPI_Wtime();
