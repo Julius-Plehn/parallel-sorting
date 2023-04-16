@@ -120,7 +120,7 @@ int *counting_sort_mpi(int *data, int length, int position) {
     int *output = malloc(length * sizeof(int));
     memset(output, 0, length * sizeof(int));
 
-#pragma omp parallel for reduction(+ : counting[ : 10])
+#pragma omp parallel for reduction(+ : counting_cumulative[ : 10])
     for (int i = 0; i < length; i++) {
         int digit = get_digit_at_position(data[i], position);
         digits[i] = digit;
@@ -238,6 +238,7 @@ int *counting_sort_mpi(int *data, int length, int position) {
 
     // if (debug)
     //     print_array(shared_sorting, length);
+#pragma omp parallel for
     for (int i = 0; i < length; i++) {
         output[i] = shared_sorting[i];
     }
@@ -296,15 +297,24 @@ int main(int argc, char **argv) {
 
     srand(mpi_rank);
     double end_time, start_time, exec_time = 0.0;
+    int upper_bound = 0;
 
     if (argc < 4) {
         printf("Missing parameters, show help\n");
         return 1;
     }
+
     // 0: Prints, 1: No debug prints
     debug = atoi(argv[1]);
     // Number of values to sort
     int N = atoi(argv[2]);
+
+    // Set optional upper range of numbers to generate
+    if (argc == 5) {
+        upper_bound = atoi(argv[4]);
+    } else {
+        upper_bound = N;
+    }
     /*
      * Variant
      * 0: no parallelization, 1: OpenMP, 2: MPI, 3: Hybrid
@@ -326,7 +336,7 @@ int main(int argc, char **argv) {
     }
     // random_data(data, 0, 3, N, 0);
 
-    random_data(data, 0, N, N, 0);
+    random_data(data, 0, upper_bound, N, 0);
 
     if (debug) {
         if (mpi_rank == 0)
@@ -337,7 +347,7 @@ int main(int argc, char **argv) {
     // Non-MPI version
     if (mpi_size == 1) {
         start_time = omp_get_wtime();
-        data = radix_sort_basic(data, N);
+        data = radix_sort_mpi(data, N);
         end_time = omp_get_wtime();
         exec_time = end_time - start_time;
     } else { // MPI version
