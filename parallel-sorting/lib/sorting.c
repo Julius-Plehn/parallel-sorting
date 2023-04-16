@@ -8,6 +8,7 @@
 #include <omp.h>
 
 int mpi_size, mpi_rank;
+int debug;
 
 void print_array(int *data, int length) {
     if (mpi_rank == 0) {
@@ -108,6 +109,7 @@ int *counting_sort_mpi(int *data, int length, int position) {
     int counting_cumulative_global[10] = {0};
     int counting_global[10] = {0};
     int counting_global_up_to_rank[10] = {0};
+    int counting_global_after_rank[10] = {0};
 
     int *shared_sorting;
     MPI_Win win;
@@ -135,14 +137,13 @@ int *counting_sort_mpi(int *data, int length, int position) {
 
     // Not possible: #pragma omp parallel forreduction(- : counting[:10])
     // Start from the back, otherwise would reposition sorted/short elements
-    /*
+
     for (int i = length - 1; i >= 0; i--) {
         int new_position = counting_cumulative[digits[i]] - 1;
         // Reduce count of occurrences of this digit
         --counting_cumulative[digits[i]];
         output[new_position] = data[i];
     }
-    */
 
     /*
      * At this point we need to determine how we should redistribute our values
@@ -152,11 +153,13 @@ int *counting_sort_mpi(int *data, int length, int position) {
     MPI_Allgather(counting, 10, MPI_INT, counting_per_rank, 10, MPI_INT,
                   MPI_COMM_WORLD);
 
+    /*
     if (mpi_rank == 0) {
         for (int i = 0; i < (10 * mpi_size); i++) {
             printf("[%d]: %d\n", i, counting_per_rank[i]);
         }
     }
+    */
 
     // Count globally
     for (int i = 0; i < 10; i++) {
@@ -172,6 +175,14 @@ int *counting_sort_mpi(int *data, int length, int position) {
             counting_global_up_to_rank[i] += counting_per_rank[i + 10 * rank];
         }
     }
+
+    /*
+     for (int rank = mpi_rank; rank > 0; rank--) {
+         for (int i = 0; i < 10; i++) {
+             counting_global_up_to_rank[i] += counting_per_rank[i + 10 * rank];
+         }
+     }
+     */
 
     // Count globally cumulative
     for (int i = 1; i < 10; i++) {
@@ -191,30 +202,56 @@ int *counting_sort_mpi(int *data, int length, int position) {
                      MPI_COMM_WORLD, &shared_sorting, &win);
     MPI_Win_fence(0, win);
 
-    for (int i = 0; i < length; i++) {
-        int new_position =
-            counting_cumulative_global[digits[i]] -
-            (counting_global_up_to_rank[digits[i]] - counting[digits[i]]) - 1;
+    // Counts after
+    for (int rank = mpi_rank + 1; rank < mpi_size; rank++) {
+        for (int i = 0; i < 10; i++) {
+            counting_global_after_rank[i] += counting_per_rank[i + 10 * rank];
+        }
+    }
+
+    /*
+    if (mpi_rank == 0) {
+        for (int i = 0; i < 10; i++) {
+            printf("After rank: [%d]: %d\n", i, counting_global_after_rank[i]);
+        }
+    }
+    */
+
+    for (int i = 0; i < 10; i++) {
+        counting_cumulative_global[i] =
+            counting_cumulative_global[i] - counting_global_after_rank[i];
+    }
+
+    for (int i = length - 1; i >= 0; i--) {
+        // for (int i = 0; i < length; i++) {
+        //  int digit = digits[i];
+        int digit = get_digit_at_position(output[i], position);
+        int new_position = counting_cumulative_global[digit] - 1;
         int move_to_rank = new_position / length;
         int rank_local_position = new_position % length;
-        printf(
-            "Rank: %d: [%d]: %d, New Rank: %d, Local position: %d, Value: %d\n",
-            mpi_rank, i, new_position, move_to_rank, rank_local_position,
-            data[i]);
-
+        /*
+        printf("Rank: %d: [%d]: %d, New Rank: %d, Local position: %d, Digit: "
+               "%d, Value: %d\n",
+               mpi_rank, i, new_position, move_to_rank, rank_local_position,
+               digit, output[i]);
+        */
         if (move_to_rank == mpi_rank)
-            shared_sorting[rank_local_position] = data[i];
+            shared_sorting[rank_local_position] = output[i];
         else {
-            MPI_Put(&data[i], 1, MPI_INT, move_to_rank, rank_local_position, 1,
-                    MPI_INT, win);
+            MPI_Put(&output[i], 1, MPI_INT, move_to_rank, rank_local_position,
+                    1, MPI_INT, win);
         }
         // Reduce count of occurrences of this digit
-        --counting_cumulative_global[digits[i]];
+        --counting_cumulative_global[digit];
     }
     MPI_Win_fence(0, win);
     MPI_Barrier(MPI_COMM_WORLD);
 
-    print_array(shared_sorting, length);
+    // if (debug)
+    //     print_array(shared_sorting, length);
+    for (int i = 0; i < length; i++) {
+        output[i] = shared_sorting[i];
+    }
 
     MPI_Win_free(&win);
 
@@ -254,8 +291,6 @@ int *radix_sort_mpi(int *data, int length) {
     int global_max_digits;
     MPI_Allreduce(&max_digits, &global_max_digits, 1, MPI_INT, MPI_MAX,
                   MPI_COMM_WORLD);
-    if (mpi_rank == 1)
-        printf("Max global: %d\n", global_max_digits);
 
     for (int digit = 0; digit < global_max_digits; digit++) {
         data = counting_sort_mpi(data, length, digit);
@@ -276,14 +311,14 @@ int main(int argc, char **argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
     srand(mpi_rank);
-    double itime, ftime, exec_time = 0.0;
+    double end_time, start_time, exec_time = 0.0;
 
     if (argc < 4) {
         printf("Missing parameters, show help\n");
         return 1;
     }
     // 0: Prints, 1: No debug prints
-    int debug = atoi(argv[1]);
+    debug = atoi(argv[1]);
     // Number of values to sort
     int N = atoi(argv[2]);
     /*
@@ -305,6 +340,8 @@ int main(int argc, char **argv) {
         printf("Memory not allocated.\n");
         exit(0);
     }
+    // random_data(data, 0, 3, N, 0);
+
     random_data(data, 0, N, N, 0);
 
     if (debug) {
@@ -315,16 +352,20 @@ int main(int argc, char **argv) {
 
     // Non-MPI version
     if (mpi_size == 1) {
-        itime = omp_get_wtime();
+        start_time = omp_get_wtime();
         data = radix_sort_basic(data, N);
-        ftime = omp_get_wtime();
-        exec_time = ftime - itime;
+        end_time = omp_get_wtime();
+        exec_time = end_time - start_time;
     } else { // MPI version
              // TODO: Time measurement
+        start_time = MPI_Wtime();
         data = radix_sort_mpi(data, N);
+        end_time = MPI_Wtime();
+        exec_time = end_time - start_time;
     }
 
-    printf("Elapsed time: %f\n", exec_time);
+    if (mpi_rank == 0)
+        printf("Elapsed time: %f\n", exec_time);
 
     if (debug) {
         if (mpi_rank == 0)
