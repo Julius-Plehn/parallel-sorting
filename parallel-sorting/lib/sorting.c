@@ -347,6 +347,8 @@ int main(int argc, char **argv) {
     // Non-MPI version
     if (mpi_size == 1) {
         start_time = omp_get_wtime();
+        // INFO: Switched to same version but with one process then, probably a
+        // better comparison
         data = radix_sort_mpi(data, N);
         end_time = omp_get_wtime();
         exec_time = end_time - start_time;
