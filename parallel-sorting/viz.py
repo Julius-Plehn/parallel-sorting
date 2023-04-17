@@ -21,17 +21,17 @@ def plot_speedup_2(df):
         color="r",
     )
     ax.figure.legend()
-    plt.savefig("speedup.pdf")
+    plt.savefig("speedup2.pdf")
 
 
 def plot_speedup(df):
     fig, ax = plt.subplots(figsize=[12, 6])
     sns.pointplot(data=df, x="# of Processes", y="Speedup")
     # plt.legend()
-    plt.savefig("speedup.pdf")
+    plt.savefig("speedup2.pdf")
     return fig, ax
 
 
-speedup_df = pd.read_pickle("speedup.pkl")
+speedup_df = pd.read_pickle("speedup2.pkl")
 print(speedup_df)
 plot_speedup_2(speedup_df)

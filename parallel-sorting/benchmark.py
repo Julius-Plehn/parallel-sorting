@@ -6,7 +6,7 @@ import subprocess
 path = "./builddir/parallel-sorting"
 
 scaling = [1, 2, 4, 8]
-N = [80000000, 40000000, 20000000, 10000000]
+N = [400000000, 200000000, 100000000, 50000000]
 # N = [100, 100, 100, 100]
 repeat = 3
 
@@ -36,4 +36,4 @@ for benchmark in range(1, len(scaling)):
 speedup_df = pd.DataFrame(measurements, columns=["# of Processes", "Time", "Speedup"])
 
 print(speedup_df)
-speedup_df.to_pickle("speedup.pkl")
+speedup_df.to_pickle("speedup2.pkl")
