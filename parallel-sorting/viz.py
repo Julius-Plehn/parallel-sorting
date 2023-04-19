@@ -9,13 +9,16 @@ mpl.rcParams["figure.dpi"] = 200
 
 def plot_speedup_2(df):
     ax = df.plot(
-        x="# of Processes", y="Speedup", xticks=df["# of Processes"], legend=False
+        x="# of Processes", y="Speedup", xticks=df["# of Processes"], 
+        ylabel="Speedup", marker='o', legend=False
     )
     ax2 = ax.twinx()
     df.plot(
         x="# of Processes",
         y="Time",
         xticks=df["# of Processes"],
+        ylabel="Time [sec]",
+        marker='o',
         ax=ax2,
         legend=False,
         color="r",
